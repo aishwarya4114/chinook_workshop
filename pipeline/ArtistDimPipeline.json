@@ -1,0 +1,48 @@
+{
+	"name": "ArtistDimPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ArtistDimPipeline",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "DF_Artist_Dim",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"ArtistStage": {
+								"schema_name": "STAGE",
+								"table_name": "ARTIST"
+							},
+							"sourceAtistDim": {
+								"schema_name": "DW",
+								"table_name": "ARTIST_DIM"
+							},
+							"sinkArtistDim": {
+								"schema_name": "DW",
+								"table_name": "ARTIST_DIM"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-10-15T01:00:04Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

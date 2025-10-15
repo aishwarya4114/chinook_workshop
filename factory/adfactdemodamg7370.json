@@ -1,0 +1,9 @@
+{
+	"name": "adfactdemodamg7370",
+	"location": "eastus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "c91ec579-a460-4f72-86af-fc917ffb3c82",
+		"tenantId": "a8eec281-aaa3-4dae-ac9b-9a398b9215e7"
+	}
+}

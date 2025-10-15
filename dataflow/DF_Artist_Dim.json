@@ -1,0 +1,97 @@
+{
+	"name": "DF_Artist_Dim",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SnowChinookDs",
+						"type": "DatasetReference"
+					},
+					"name": "ArtistStage"
+				},
+				{
+					"dataset": {
+						"referenceName": "SnowChinookDs",
+						"type": "DatasetReference"
+					},
+					"name": "sourceAtistDim"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SnowChinookDs",
+						"type": "DatasetReference"
+					},
+					"name": "sinkArtistDim"
+				}
+			],
+			"transformations": [
+				{
+					"name": "joinSourceTgt"
+				},
+				{
+					"name": "surrogateKey1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          ARTISTID as decimal(38,0),",
+				"          NAME as string,",
+				"          CREATED_BY as string,",
+				"          CREATED_DT as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table') ~> ArtistStage",
+				"source(output(",
+				"          ARTIST_KEY as decimal(10,0),",
+				"          ARTIST_ID as decimal(10,0),",
+				"          ARTIST_NAME as string,",
+				"          SOURCE_ID as string,",
+				"          DATE_TO_WAREHOUSE as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table') ~> sourceAtistDim",
+				"ArtistStage, sourceAtistDim join(ARTISTID == ARTIST_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinSourceTgt",
+				"joinSourceTgt keyGenerate(output(RowNum as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> surrogateKey1",
+				"surrogateKey1 derive(CREATED_BY = \"Adf dataflow\",",
+				"          CREATED_DT = currentDate()) ~> derivedColumn1",
+				"derivedColumn1 alterRow(updateIf(ARTISTID==ARTIST_ID),",
+				"     insertIf(iifNull(ARTISTID,0,ARTIST_ID)==0)) ~> alterRow1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          ARTIST_ID = ARTISTID,",
+				"          ARTIST_NAME = NAME,",
+				"          SOURCE_ID = CREATED_BY,",
+				"          DATE_TO_WAREHOUSE = CREATED_DT,",
+				"          ARTIST_KEY = RowNum",
+				"     )) ~> sinkArtistDim"
+			]
+		}
+	}
+}

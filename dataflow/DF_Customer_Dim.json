@@ -1,0 +1,176 @@
+{
+	"name": "DF_Customer_Dim",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SnowChinookDs",
+						"type": "DatasetReference"
+					},
+					"name": "CustomerStage"
+				},
+				{
+					"dataset": {
+						"referenceName": "SnowChinookDs",
+						"type": "DatasetReference"
+					},
+					"name": "sourceCustomerDIM"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SnowChinookDs",
+						"type": "DatasetReference"
+					},
+					"name": "sinkCustomerDIM"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "joinSourceTgt"
+				},
+				{
+					"name": "RowChange"
+				},
+				{
+					"name": "surrogateKey1"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CUSTOMERID as decimal(38,0),",
+				"          FIRSTNAME as string,",
+				"          LASTNAME as string,",
+				"          COMPANY as string,",
+				"          ADDRESS as string,",
+				"          CITY as string,",
+				"          STATE as string,",
+				"          COUNTRY as string,",
+				"          POSTALCODE as string,",
+				"          PHONE as string,",
+				"          FAX as string,",
+				"          EMAIL as string,",
+				"          SUPPORTREPID as decimal(38,0),",
+				"          CREATED_BY as string,",
+				"          CREATED_DT as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table') ~> CustomerStage",
+				"source(output(",
+				"          CUSTOMER_KEY as decimal(10,0),",
+				"          CUSTOMER_ID as decimal(10,0),",
+				"          FIRST_NAME as string,",
+				"          LAST_NAME as string,",
+				"          COMPANY_NAME as string,",
+				"          CITY as string,",
+				"          STATE as string,",
+				"          COUNTRY as string,",
+				"          ZIP_CODE as string,",
+				"          EMPLOYEE_ID as decimal(10,0),",
+				"          IS_ACTIVE as string,",
+				"          SOURCE_ID as string,",
+				"          DATE_TO_WAREHOUSE as timestamp,",
+				"          RECORD_HASH as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table') ~> sourceCustomerDIM",
+				"surrogateKey1 derive(CREATED_BY = \"Adf_Dataflow\",",
+				"          CREATED_DT = currentDate(),",
+				"          SOURCE_HASH = md5(\r",
+				"  concat(\r",
+				"    coalesce(FIRSTNAME, ''), '|',\r",
+				"    coalesce(LASTNAME, ''), '|',\r",
+				"    coalesce(COMPANY, ''), '|',\r",
+				"    coalesce(ADDRESS, ''), '|',\r",
+				"    coalesce(CITY, ''), '|',\r",
+				"    coalesce(STATE, ''), '|',\r",
+				"    coalesce(COUNTRY, ''), '|',\r",
+				"    coalesce(POSTALCODE, '')\r",
+				"  )\r",
+				"),",
+				"          IS_ACTIVE = 'Y') ~> derivedColumn1",
+				"CustomerStage, sourceCustomerDIM join(CUSTOMERID == CUSTOMER_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinSourceTgt",
+				"derivedColumn1 alterRow(insertIf(iifNull(CUSTOMERID,0,CUSTOMER_ID)==0),",
+				"     updateIf(CUSTOMERID==CUSTOMER_ID),",
+				"     updateIf(RECORD_HASH!=SOURCE_HASH)) ~> RowChange",
+				"select1 keyGenerate(output(Row as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> surrogateKey1",
+				"joinSourceTgt select(mapColumn(",
+				"          CUSTOMERID,",
+				"          FIRSTNAME,",
+				"          LASTNAME,",
+				"          COMPANY,",
+				"          ADDRESS,",
+				"          CITY = CustomerStage@CITY,",
+				"          STATE = CustomerStage@STATE,",
+				"          COUNTRY = CustomerStage@COUNTRY,",
+				"          POSTALCODE,",
+				"          PHONE,",
+				"          FAX,",
+				"          EMAIL,",
+				"          SUPPORTREPID,",
+				"          CREATED_BY,",
+				"          CREATED_DT,",
+				"          CUSTOMER_ID,",
+				"          FIRST_NAME,",
+				"          LAST_NAME,",
+				"          COMPANY_NAME,",
+				"          CITY = sourceCustomerDIM@CITY,",
+				"          STATE = sourceCustomerDIM@STATE,",
+				"          COUNTRY = sourceCustomerDIM@COUNTRY,",
+				"          ZIP_CODE,",
+				"          EMPLOYEE_ID,",
+				"          IS_ACTIVE,",
+				"          SOURCE_ID,",
+				"          DATE_TO_WAREHOUSE,",
+				"          RECORD_HASH",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"RowChange sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:true,",
+				"     upsertable:true,",
+				"     keys:['CUSTOMER_KEY'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          CUSTOMER_ID = CUSTOMERID,",
+				"          FIRST_NAME = FIRSTNAME,",
+				"          LAST_NAME = LASTNAME,",
+				"          COMPANY_NAME = COMPANY,",
+				"          CITY,",
+				"          STATE,",
+				"          COUNTRY,",
+				"          ZIP_CODE = POSTALCODE,",
+				"          SOURCE_ID = CREATED_BY,",
+				"          DATE_TO_WAREHOUSE = CREATED_DT,",
+				"          EMPLOYEE_ID = SUPPORTREPID,",
+				"          IS_ACTIVE,",
+				"          RECORD_HASH = SOURCE_HASH,",
+				"          CUSTOMER_KEY = Row",
+				"     )) ~> sinkCustomerDIM"
+			]
+		}
+	}
+}
