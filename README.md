@@ -108,6 +108,3 @@ chinook-dbt/
    dbt test
    ```
 
-## Author
-
-Aishwarya Vikas Patil
